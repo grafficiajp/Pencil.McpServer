@@ -73,7 +73,6 @@ public sealed class ScenarioBuilder
 
 	private static string BuildImageSource(string absolutePath)
 	{
-		// NOTE: PENCIL 側が受け付ける Source 形式（file URI か別形式か）は実機で要確認。
-		return new Uri(absolutePath).AbsoluteUri;
+		return absolutePath;
 	}
 }
