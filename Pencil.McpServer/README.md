@@ -8,6 +8,10 @@ PENCIL CLI をラップして `generate_video` ツールを提供する .NET 10 
 dotnet build .\Pencil.McpServer.slnx
 ```
 
+## テスト
+
+テストプロジェクトの内容と使い方は [Pencil.McpServer.Tests/Readme.md](../Pencil.McpServer.Tests/Readme.md) を参照してください。
+
 ## 実行
 
 ```powershell

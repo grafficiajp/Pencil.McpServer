@@ -11,11 +11,11 @@ public sealed class VideoTools(
 	PencilRenderer pencilRenderer)
 {
 	[McpServerTool(Name = "generate_video")]
-	[Description("ローカルの画像とテキストから PENCIL を実行して mp4 動画を生成します。text は空文字不可、imagePath は存在するローカル絶対パス（png/jpg/jpeg）、outputFileName は .mp4 のローカル絶対パスです。処理には数十秒〜数分かかる場合があります。成功時は生成された動画ファイルのフルパスを含むメッセージを返します。")]
+	[Description("画像とテキストから PENCIL を実行して mp4 動画を生成します。text は空文字不可、imagePath はローカル絶対パス（png/jpg/jpeg）または http/https の URI、outputFileName は .mp4 のローカル絶対パスです。処理には数十秒〜数分かかる場合があります。成功時は生成された動画ファイルのフルパスを含むメッセージを返します。")]
 	public async Task<string> GenerateVideo(
 		[Description("動画下部に表示する文字列。空文字や空白のみは不可です。")]
 		string text,
-		[Description("使用する画像ファイルのローカル絶対パス。拡張子は .png / .jpg / .jpeg のみ対応します。")]
+		[Description("使用する画像の指定。ローカル絶対パス（.png / .jpg / .jpeg）または http/https の URI を指定できます。URI の場合は PENCIL 側で一時フォルダーへダウンロードしてから処理されます。")]
 		string imagePath,
 		[Description("出力する mp4 ファイルのローカル絶対パス。拡張子は .mp4 必須で、出力先フォルダーが無い場合は作成されます。同名ファイルが既にある場合は削除して上書きします。")]
 		string outputFileName,
@@ -44,9 +44,16 @@ public sealed class VideoTools(
 			throw new McpException("imagePath は必須です。");
 		}
 
+		if (Uri.TryCreate(imagePath, UriKind.Absolute, out var uri)
+			&& (uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+				|| uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+		{
+			return;
+		}
+
 		if (!Path.IsPathFullyQualified(imagePath))
 		{
-			throw new McpException("imagePath はローカルの絶対パスで指定してください。");
+			throw new McpException("imagePath はローカルの絶対パス、または http/https の URI で指定してください。");
 		}
 
 		if (!File.Exists(imagePath))
@@ -61,7 +68,7 @@ public sealed class VideoTools(
 
 		if (!isSupported)
 		{
-			throw new McpException("imagePath の拡張子は .png / .jpg / .jpeg のみ対応しています。");
+			throw new McpException("imagePath がローカルパスの場合、拡張子は .png / .jpg / .jpeg のみ対応しています。");
 		}
 	}
 
