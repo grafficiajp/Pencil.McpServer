@@ -22,7 +22,7 @@ namespace Pencil.McpServer.Tools
 		}
 
 		[McpServerTool(Name = "generate_video")]
-		[Description("ローカルの画像とテキストから PENCIL を実行して mp4 動画を生成します。text は空文字不可、imagePath はローカル絶対パスまたは http/https の画像 URLです。出力先は c:/PencilOut 固定で、_ID はサーバー側で自動採番されます。処理には数十秒〜数分かかる場合があります。成功時は生成された動画ファイルのフルパスを返します（FTP アップロードが設定されている場合は公開 URL を追加で返すことがあります）。")]
+		[Description("ローカルの画像とテキストから PENCIL を実行して mp4 動画を生成します。text は空文字不可、imagePath はローカル絶対パスまたは http/https の画像 URLです。出力先は c:/PencilOut 固定で、_ID はサーバー側で自動採番されます。処理には数十秒〜数分かかる場合があります。成功時は https://grafficia.xsrv.jp/uploadtest/ 配下の動画URLを返します。")]
 		public async Task<string> GenerateVideo(
 			[Description("動画下部に表示する文字列。空文字や空白のみは不可です。")]
 			string text,

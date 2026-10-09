@@ -2,9 +2,12 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Pencil.McpServer.Services;
-using Pencil.McpServer.Services;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+	Args = args,
+	ContentRootPath = AppContext.BaseDirectory
+});
 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options =>
@@ -13,7 +16,6 @@ builder.Logging.AddConsole(options =>
 });
 
 builder.Services.AddSingleton<ScenarioBuilder>();
-builder.Services.AddSingleton<IFtpUploader, FtpUploader>();
 builder.Services.AddSingleton<PencilRenderer>();
 builder.Services
 	.AddMcpServer()
