@@ -4,14 +4,29 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using Newtonsoft.Json;
 using Pencil.McpServer.Models;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Pencil.McpServer.Services;
 
-public sealed class PencilRenderer(ILogger<PencilRenderer> logger)
+public sealed class PencilRenderer
 {
 	private const string PencilExePath = @"C:\PencilSystem\RenderingApp\PencilRenderingApp.exe";
+	private const string FtpSettingConfigPath = @"C:\PencilSystem\UploadSetting\FtpSetting.config";
 	private const int RenderTimeoutMinutes = 10;
 	private const int MaxErrorTailLength = 2000;
+
+	private readonly ILogger<PencilRenderer> _logger;
+	private readonly IFtpUploader _ftpUploader;
+
+	public PencilRenderer(ILogger<PencilRenderer> logger, IFtpUploader ftpUploader)
+	{
+		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+		_ftpUploader = ftpUploader ?? throw new ArgumentNullException(nameof(ftpUploader));
+	}
 
 	public async Task<string> RenderAsync(PencilCanvasRoot scenario, string outputFileName, CancellationToken cancellationToken)
 	{
@@ -67,7 +82,44 @@ public sealed class PencilRenderer(ILogger<PencilRenderer> logger)
 					throw new McpException("PENCIL は終了コード 0 で完了しましたが、出力ファイルが見つかりません。");
 				}
 
-				logger.LogInformation("PENCIL rendering completed successfully. Output: {OutputFileName}", outputFileName);
+				_logger.LogInformation("PENCIL rendering completed successfully. Output: {OutputFileName}", outputFileName);
+
+				// FTP アップロード処理（_ID が設定されていれば実行）
+				string? publicUrl = null;
+				try
+				{
+					if (!string.IsNullOrWhiteSpace(scenario?.Id))
+					{
+						publicUrl = await _ftpUploader.UploadFileAsync(outputFileName, scenario.Id, cancellationToken).ConfigureAwait(false);
+					}
+				}
+				catch (Exception ex)
+				{
+					// FtpUploader が FailOnUploadError=true の時は例外が来るためここに到達する。
+					throw new McpException($"アップロードに失敗しました: {ex.Message}", ex);
+				}
+
+				var convertedFtpUrl = TryGetHttpsUrlFromFtpSetting();
+				if (!string.IsNullOrWhiteSpace(convertedFtpUrl) && !string.IsNullOrWhiteSpace(scenario?.Id))
+				{
+					convertedFtpUrl = CombineUrl(convertedFtpUrl, scenario.Id + ".mp4");
+				}
+
+				if (!string.IsNullOrWhiteSpace(publicUrl) && !string.IsNullOrWhiteSpace(convertedFtpUrl))
+				{
+					return $"動画生成が完了しました。出力ファイル: {outputFileName}。公開 URL: {publicUrl}。利用 URL: {convertedFtpUrl}";
+				}
+
+				if (!string.IsNullOrWhiteSpace(publicUrl))
+				{
+					return $"動画生成が完了しました。出力ファイル: {outputFileName}。公開 URL: {publicUrl}";
+				}
+
+				if (!string.IsNullOrWhiteSpace(convertedFtpUrl))
+				{
+					return $"動画生成が完了しました。出力ファイル: {outputFileName}。利用 URL: {convertedFtpUrl}";
+				}
+
 				return $"動画生成が完了しました。出力ファイル: {outputFileName}";
 			}
 
@@ -142,6 +194,75 @@ public sealed class PencilRenderer(ILogger<PencilRenderer> logger)
 		}
 	}
 
+	private static string? TryGetHttpsUrlFromFtpSetting()
+	{
+		if (!File.Exists(FtpSettingConfigPath))
+		{
+			return null;
+		}
+
+		try
+		{
+			var content = File.ReadAllText(FtpSettingConfigPath);
+			var rawUrl = TryExtractFtpServerUrl(content);
+			if (string.IsNullOrWhiteSpace(rawUrl))
+			{
+				return null;
+			}
+
+			return ToHttpsUrl(rawUrl);
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	private static string? TryExtractFtpServerUrl(string content)
+	{
+		var xmlMatch = Regex.Match(content, "<add\\s+key=[\"']UP_FtpServerURL[\"']\\s+value=[\"'](?<v>[^\"']+)[\"']", RegexOptions.IgnoreCase);
+		if (xmlMatch.Success)
+		{
+			return xmlMatch.Groups["v"].Value.Trim();
+		}
+
+		var pairMatch = Regex.Match(content, "UP_FtpServerURL\\s*[:=]\\s*[\"']?(?<v>[^\"'\\r\\n]+)", RegexOptions.IgnoreCase);
+		if (pairMatch.Success)
+		{
+			return pairMatch.Groups["v"].Value.Trim();
+		}
+
+		return null;
+	}
+
+	private static string ToHttpsUrl(string value)
+	{
+		var trimmed = value.Trim();
+		if (trimmed.StartsWith("//", StringComparison.Ordinal))
+		{
+			trimmed = "https:" + trimmed;
+		}
+		else if (!trimmed.Contains("://", StringComparison.Ordinal))
+		{
+			trimmed = "https://" + trimmed.TrimStart('/');
+		}
+		else if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+		{
+			trimmed = new UriBuilder(uri)
+			{
+				Scheme = Uri.UriSchemeHttps,
+				Port = -1
+			}.Uri.ToString();
+		}
+
+		return trimmed.TrimEnd('/');
+	}
+
+	private static string CombineUrl(string baseUrl, string relative)
+	{
+		return $"{baseUrl.TrimEnd('/')}/{relative.TrimStart('/')}";
+	}
+
 	private void TryDeleteTempFile(string tempJsonPath)
 	{
 		try
@@ -153,7 +274,7 @@ public sealed class PencilRenderer(ILogger<PencilRenderer> logger)
 		}
 		catch (Exception ex)
 		{
-			logger.LogWarning(ex, "一時ファイル削除に失敗しました: {TempJsonPath}", tempJsonPath);
+			_logger.LogWarning(ex, "一時ファイル削除に失敗しました: {TempJsonPath}", tempJsonPath);
 		}
 	}
 }

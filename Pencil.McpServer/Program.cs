@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using Pencil.McpServer.Services;
+using Pencil.McpServer.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Logging.AddConsole(options =>
 });
 
 builder.Services.AddSingleton<ScenarioBuilder>();
+builder.Services.AddSingleton<IFtpUploader, FtpUploader>();
 builder.Services.AddSingleton<PencilRenderer>();
 builder.Services
     .AddMcpServer()

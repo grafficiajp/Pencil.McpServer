@@ -34,4 +34,6 @@ dotnet run --project .\Pencil.McpServer\Pencil.McpServer.csproj
 1. サーバーを stdio で起動可能な状態にする。
 2. MCP Inspector で stdio 接続を作成し、`command` に `dotnet`、`args` に `run --project <csprojの絶対パス>` を設定する。
 3. 接続後に `tools/list` を実行し、`generate_video` が表示されることを確認する。
-4. `generate_video` を実行し、`text` / `imagePath` / `outputFileName` を与えて動画生成を確認する。
+4. `generate_video` を実行し、`text` / `imagePath` を与えて動画生成を確認する。
+   - サーバー側で GUID を自動生成して `_ID` として付与し、出力先は `C:\\PencilOut\\<GUID>.mp4` に固定される。
+   - `C:\\PencilSystem\\UploadSetting\\FtpSetting.config` が存在し `UP_FtpServerURL` が設定されている場合、結果に https へ正規化した利用 URL が含まれる。
