@@ -2,10 +2,12 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using Newtonsoft.Json;
 using Pencil.McpServer.Models;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Pencil.McpServer.Services;
