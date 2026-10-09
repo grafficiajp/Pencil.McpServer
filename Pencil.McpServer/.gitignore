@@ -1,3 +1,9 @@
 bin/
 obj/
 .vs/
+
+# Visual Studio publish profile user-specific settings
+**/*.pubxml.user
+
+# Local publish outputs
+**/publish/
