@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Text;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using Newtonsoft.Json;

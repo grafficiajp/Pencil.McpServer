@@ -34,7 +34,9 @@ Claude デスクトップ（MCPホスト）から stdio で接続し、`generate
 - 説明文は Claude が使い方を判断できるよう、「何をするか」「各引数の意味と制約」「処理に時間がかかること」「成功時は出力ファイルのフルパスを返すこと」を具体的に書く
 - 引数チェック（失敗時は原因が分かるメッセージで例外を投げる）:
   - `text` が空でない
-  - `imagePath` が絶対パスで、ファイルが存在し、拡張子が対応形式
+  - `imagePath` がローカル絶対パスまたは `http://` / `https://` のURIである
+  - `imagePath` がローカル絶対パスの場合は、ファイルが存在し、拡張子が対応形式である
+  - `imagePath` がURIの場合は、PENCIL が一時フォルダに画像をダウンロードしてから処理する前提で受け付ける
   - `outputFileName` が絶対パスで拡張子が .mp4。出力先フォルダが無ければ作成する
   - `id` は省略可。指定された場合は正規表現 `^[A-Za-z0-9_-]{1,64}$` に一致すること。指定がない場合は ScenarioBuilder が outputFileName のファイル名（拡張子除く）から推定して `_ID` を設定することがある
 
@@ -195,7 +197,7 @@ Services/PencilRenderer.cs      … 一時JSON作成・プロセス起動・結�
 - Sequence は `Scene` を1つ（Duration "0:0:10"）
   - PictureLayer: `Source` = 画像のURI、StartTime "0:0:0"、Duration "0:0:10"、Top/Left "0.1"、Height/Width "0.8"
   - TextLayer: `Text` = `text`、FontSize "0.05"、TextAlignment "Center"、StartTime "0:0:0.5"、Duration "0:0:9"、Top "0.85"、Left "0.05"、Height "0.1"、Width "0.9"
-- `imagePath`（ローカル絶対パス）を `Source` 用のURIに変換する処理は、**専用メソッド `BuildImageSource(string absolutePath)` に分離**する。初期実装は `new Uri(absolutePath).AbsoluteUri`（file:///形式）とし、「PENCIL側の受け付け形式に合わせて要確認」とコメントを残す
+- `imagePath`（ローカル絶対パスまたは `http://` / `https://` のURI）を `Source` 用のURIに変換する処理は、**専用メソッド `BuildImageSource(string imagePath)` に分離**する。`imagePath` がURIならそのまま使い、ローカル絶対パスなら `new Uri(imagePath).AbsoluteUri`（file:///形式）に変換する。PENCIL はURI指定時に一時フォルダへ画像をダウンロードしてから処理する前提とする
 
 ## 4. JSONファイルの出力
 - 一時ファイル: `Path.Combine(Path.GetTempPath(), $"pencil_{Guid.NewGuid():N}.json")`
